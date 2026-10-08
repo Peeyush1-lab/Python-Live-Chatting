@@ -28,7 +28,7 @@ The current stage is repository setup; messaging is not implemented yet.
 
 ## 3. Architecture
 
-Planned initial architecture:
+Implemented v0.1.0 architecture:
 
 - Browser frontend: displays the interface and connection status.
 - JavaScript Socket.IO client: sends and receives real-time events.
@@ -50,9 +50,15 @@ Add further decisions when they occur.
 
 ## 5. Skills demonstrated
 
-Record verified skills with file, commit, or test evidence.
-
-No application skills verified yet.
+- [x] Combined FastAPI and Socket.IO through ASGI.
+  Evidence: main.py; browser connection verified.
+- [x] Served HTML and static frontend assets.
+  Evidence: main.py and frontend/.
+- [x] Handled connection, disconnection, and reconnection events.
+  Evidence: frontend/script.js; server stop/restart check passed.
+- [x] Built a responsive interface with accessible controls.
+  Evidence: frontend/index.html and frontend/style.css;
+  mobile layout and keyboard focus checks passed.
 
 ## 6. Numbers I measured
 
@@ -87,20 +93,49 @@ Answers not rehearsed yet.
 
 ## 10. Honest limitations
 
-- Application code has not been implemented in the current project setup.
-- No verified messaging, authentication, or message persistence.
-- No deployment or performance measurements.
-
-Update this section as features become verified.
+- No message sending, usernames, rooms, or message history yet.
+- No authentication or deployment.
+- The browser Socket.IO client loads from an external CDN.
+- No performance measurements or load tests yet.
 
 ## 11. How to run it
 
-Application run instructions will be recorded after v0.1.0 works.
+Prerequisites: Python with pip, Git, and internet access to load
+the browser Socket.IO client.
+
+### First-time setup — Windows PowerShell
+
+```powershell
+git clone https://github.com/Peeyush1-lab/Python-Live-Chatting.git
+cd Python-Live-Chatting
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+### Start the application
+
+From the project root:
+
+```powershell
+.venv\Scripts\Activate.ps1
+python -m uvicorn main:app --reload
+```
+</br>
+
+> Open http://127.0.0.1:8000.
+Health endpoint: http://127.0.0.1:8000/health.
+
+Stop the server with Ctrl+C.
+
+Required environment variables: none for **v0.1.0**.
+
+The application was verified locally. A fresh-clone setup check
+has not yet been recorded.
 
 ## 12. Credits
 
-Socket.IO learning reference:
-[Miguel Grinberg — Learn Socket.IO with Python and JavaScript in 90 Minutes](https://blog.miguelgrinberg.com/post/learn-socket-io-with-python-and-javascript-in-90-minutes).
+Socket.IO learning reference: [Miguel Grinberg — Learn Socket.IO with Python and JavaScript in 90 Minutes](https://blog.miguelgrinberg.com/post/learn-socket-io-with-python-and-javascript-in-90-minutes).
 
 Engineering log and learning workflow:
 The Resume Project Vault 2026, curated by @pratham.codes.

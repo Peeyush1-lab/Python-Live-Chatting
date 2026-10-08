@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Python Live Chatting</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script defer src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script defer src="/static/script.js"></script>
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+        <nav aria-label="Main navigation">
+            <a class="brand" href="/">Python Live Chatting<span>.</span></a>
+            <span class="version">v0.1.0</span>
+        </nav>
+    </header>
+
+    <main id="main">
+        <section class="connection-card" aria-labelledby="heading">
+            <p class="eyebrow">A space to connect</p>
+            <h1 id="heading">Good conversations<br>start here.</h1>
+            <p class="intro">
+                Your real-time chat space is taking shape.
+                First, let’s get you connected.
+            </p>
+
+            <section class="connection-panel" aria-labelledby="connection-heading">
+                <h2 id="connection-heading">Server connection</h2>
+                <p id="status" role="status" data-state="connecting">
+                    Connecting…
+                </p>
+                <p id="message">Waiting for the Python server.</p>
+                <button id="retry" type="button" disabled>
+                    Retry connection
+                </button>
+            </section>
+
+            <p class="release-note">
+                Messaging arrives in the next release.
+            </p>
+        </section>
+    </main>
+
+    <footer>Built one feature at a time.</footer>
+</body>
+</html>
