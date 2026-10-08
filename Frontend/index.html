@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Live Chatting</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            font-family: Arial, sans-serif;
+            background: #111827;
+            color: #f9fafb;
+        }
+
+        main {
+            width: 100%;
+            max-width: 480px;
+            padding: 32px;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            background: #1f2937;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .version {
+            color: #9ca3af;
+        }
+
+        #status {
+            padding: 12px;
+            border-radius: 8px;
+            background: #374151;
+            font-weight: bold;
+        }
+
+        #status[data-state="connected"] {
+            background: #14532d;
+            color: #bbf7d0;
+        }
+
+        #status[data-state="disconnected"] {
+            background: #7f1d1d;
+            color: #fecaca;
+        }
+
+        #message {
+            line-height: 1.6;
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <p class="version">v0.1.0</p>
+        <h1>Python Live Chatting</h1>
+        <p>Real-time communication with Socket.IO.</p>
+
+        <p id="status" role="status" aria-live="polite">
+            Connecting…
+        </p>
+
+        <p id="message" aria-live="polite">
+            Waiting for the server.
+        </p>
+    </main>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
+    <script>
+        const statusElement = document.getElementById("status");
+        const messageElement = document.getElementById("message");
+
+        function updateStatus(text, state) {
+            statusElement.textContent = text;
+            statusElement.dataset.state = state;
+        }
+
+        if (typeof io === "undefined") {
+            updateStatus("Client failed to load", "disconnected");
+            messageElement.textContent =
+                "Check your internet connection and reload the page.";
+        } else {
+            const socket = io();
+
+            socket.on("connect", () => {
+                updateStatus("Connected", "connected");
+            });
+
+            socket.on("server_message", (data) => {
+                messageElement.textContent = data.message;
+            });
+
+            socket.on("disconnect", () => {
+                updateStatus("Disconnected", "disconnected");
+                messageElement.textContent =
+                    "Connection lost. Waiting to reconnect.";
+            });
+
+            socket.on("connect_error", () => {
+                updateStatus("Connection failed", "disconnected");
+                messageElement.textContent =
+                    "Make sure the Python server is running.";
+            });
+
+            socket.io.on("reconnect_attempt", () => {
+                updateStatus("Reconnecting…", "connecting");
+            });
+        }
+    </script>
+</body>
+</html>
