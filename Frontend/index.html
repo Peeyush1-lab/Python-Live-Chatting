@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,13 +10,14 @@
     <script defer src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script defer src="/static/script.js"></script>
 </head>
+
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
         <nav aria-label="Main navigation">
             <a class="brand" href="/">Python Live Chatting<span>.</span></a>
-            <span class="version">v0.1.0</span>
+            <span class="version">v0.2.0</span>
         </nav>
     </header>
 
@@ -25,7 +27,7 @@
             <h1 id="heading">Good conversations<br>start here.</h1>
             <p class="intro">
                 Your real-time chat space is taking shape.
-                First, let’s get you connected.
+                First, let's get you connected.
             </p>
 
             <section class="connection-panel" aria-labelledby="connection-heading">
@@ -38,13 +40,46 @@
                     Retry connection
                 </button>
             </section>
+            <section class="connection-panel" aria-labelledby="username-heading">
+                <h2 id="username-heading">Choose your display name</h2>
 
+                <form id="username-form">
+                    <label for="username">Username</label>
+                    <input id="username" name="username" type="text" minlength="2" maxlength="24"
+                        autocomplete="nickname" aria-describedby="username-feedback" required>
+                    <button id="join-button" type="submit" disabled>
+                        Join chat
+                    </button>
+                </form>
+
+                <p id="username-feedback" role="status">
+                    Connect to the server before joining.
+                </p>
+            </section>
+            <section class="connection-panel" aria-labelledby="chat-heading">
+                <h2 id="chat-heading">Shared conversation</h2>
+
+                <ol id="messages" role="log" aria-label="Chat messages" aria-live="polite" aria-relevant="additions">
+                </ol>
+
+                <form id="message-form">
+                    <label for="message-input">Your message</label>
+                    <input id="message-input" name="message" type="text" maxlength="1000"
+                        aria-describedby="message-feedback" required disabled>
+                    <button id="send-button" type="submit" disabled>Send message</button>
+                </form>
+
+                <p id="message-feedback" role="status">
+                    Join the chat to send messages.
+                </p>
+            </section>
             <p class="release-note">
-                Messaging arrives in the next release.
+                Messages are live and are not saved after refreshing.
             </p>
         </section>
     </main>
 
     <footer>Built one feature at a time.</footer>
 </body>
+
 </html>

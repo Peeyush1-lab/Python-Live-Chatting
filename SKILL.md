@@ -28,15 +28,33 @@ The current stage is repository setup; messaging is not implemented yet.
 
 ## 3. Architecture
 
-Implemented v0.1.0 architecture:
+Implemented v0.2.0 architecture:
 
-- Browser frontend: displays the interface and connection status.
-- JavaScript Socket.IO client: sends and receives real-time events.
-- Python Socket.IO server: manages connections and handles events.
-- FastAPI: serves the frontend and supports future HTTP endpoints.
+- Browser frontend: displays connection status, username entry,
+  the shared conversation, and the message composer.
+- JavaScript Socket.IO client: sends join_chat and send_message
+  events, handles acknowledgements, and displays chat_message events.
+- Python Socket.IO server: validates requests, stores usernames
+  per connection, and broadcasts messages to connected clients.
+- Socket.IO session storage: holds each connection's display name
+  temporarily; users must rejoin after reconnecting.
+- FastAPI: serves the frontend assets and the /health endpoint.
 - Uvicorn: runs the combined ASGI application.
 
-FastAPI and Socket.IO will run together in one application.
+### Message Flow
+
+1. The browser sends a username through join_chat.
+2. The server validates and stores it in the connection's session.
+3. The browser sends message text through send_message.
+4. The server validates the message and retrieves the session username.
+5. The server broadcasts chat_message to all connected browsers.
+6. Each browser displays the sender and message as plain text.
+
+FastAPI and Socket.IO run together in one application.
+
+Messages are not stored on the server. Each browser holds its displayed
+conversation temporarily, and refreshing clears it.
+
 SQLite is planned for a later release.
 
 ## 4. Key decisions and trade-offs
@@ -45,8 +63,9 @@ SQLite is planned for a later release.
 |---|---|---|---|---|
 | Frontend | Streamlit or HTML/CSS/JavaScript | HTML/CSS/JavaScript | Direct browser event handling and control over the interface | Requires writing frontend code |
 | Delivery | Complete app at once or incremental releases | Incremental releases | Understand and verify each feature before adding another | Full functionality arrives gradually |
+| Username storage | Browser-provided sender or server session | Server session | Server selects the sender name from the joined connection | Users must rejoin after reconnecting |
+| Message display | HTML rendering or plain text | textContent | User messages display literally | Rich-text formatting is unavailable |
 
-Add further decisions when they occur.
 
 ## 5. Skills demonstrated
 
@@ -59,6 +78,16 @@ Add further decisions when they occur.
 - [x] Built a responsive interface with accessible controls.
   Evidence: frontend/index.html and frontend/style.css;
   mobile layout and keyboard focus checks passed.
+- [x] Stored display names in Socket.IO sessions.
+  Evidence: main.py join_chat handler.
+- [x] Validated usernames and messages on the server.
+  Evidence: main.py join_chat and send_message handlers.
+- [x] Implemented broadcasts and acknowledgement callbacks.
+  Evidence: main.py and frontend/script.js; two-tab messaging verified.
+- [x] Rendered user content as plain text.
+  Evidence: frontend/script.js; literal HTML text check passed.
+- [x] Disabled sending after disconnection until users rejoin.
+  Evidence: server stop/restart check passed.
 
 ## 6. Numbers I measured
 
@@ -93,10 +122,14 @@ Answers not rehearsed yet.
 
 ## 10. Honest limitations
 
-- No message sending, usernames, rooms, or message history yet.
-- No authentication or deployment.
+- Display names are not authenticated or unique.
+- All connected browsers can receive shared-chat messages.
+- Messages are not saved; refreshing clears displayed history.
+- Users must join again after reconnecting.
+- Delivery acknowledgement timeouts can leave delivery uncertain.
+- No multiple rooms, private messaging, or deployment.
 - The browser Socket.IO client loads from an external CDN.
-- No performance measurements or load tests yet.
+- No performance measurements yet.
 
 ## 11. How to run it
 

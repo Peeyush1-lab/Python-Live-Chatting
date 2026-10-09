@@ -7,7 +7,7 @@ a manageable feature, verification steps, and an engineering log update.
 
 ## Project Status
 
-v0.1.0 — Socket.IO connection interface verified locally.
+v0.2.0 — Usernames and shared-chat messaging verified locally.
 
 ### Working Features
 
@@ -16,6 +16,11 @@ v0.1.0 — Socket.IO connection interface verified locally.
 - Automatic reconnection and manual retry.
 - Keyboard focus indicators and reduced-motion support.
 - HTTP health endpoint at /health.
+- Display names stored per Socket.IO connection.
+- Live messaging across connected browser sessions.
+- Username and message validation on the server.
+- Sending enabled only after joining.
+- Messages rendered as plain text.
 
 Messaging is planned for v0.2.0.
 
@@ -85,10 +90,14 @@ skills, measurements, fixes, interview preparation, and honest limitations.
 
 ## Current Limitations
 
-- No message sending, usernames, rooms, or message history yet.
-- No authentication or deployment.
+- Display names are not authenticated or unique.
+- All connected browsers can receive shared-chat messages.
+- Messages are not saved; refreshing clears displayed history.
+- Users must join again after reconnecting.
+- Delivery acknowledgement timeouts can leave delivery uncertain.
+- No multiple rooms, private messaging, or deployment.
 - The browser Socket.IO client loads from an external CDN.
-- No performance measurements or load tests yet.
+- No performance measurements yet.
 
 ## Credits
 
