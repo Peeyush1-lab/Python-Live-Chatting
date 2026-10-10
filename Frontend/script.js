@@ -58,13 +58,34 @@ if (typeof window.io !== "function") {
             messages.scrollHeight - messages.scrollTop - messages.clientHeight < 60;
 
         const item = document.createElement("li");
+        const header = document.createElement("header");
         const sender = document.createElement("strong");
         const body = document.createElement("p");
 
+        header.className = "message-header";
         sender.textContent = data.username;
         body.textContent = data.message;
 
-        item.append(sender, body);
+        header.append(sender);
+
+        const date = new Date(data.timestamp);
+
+        if (data.timestamp && !Number.isNaN(date.getTime())) {
+            const time = document.createElement("time");
+
+            time.dateTime = date.toISOString();
+            time.textContent = new Intl.DateTimeFormat(undefined, {
+                hour: "2-digit",
+                minute: "2-digit",
+            }).format(date);
+
+            time.title = date.toLocaleString();
+            time.setAttribute("aria-label", date.toLocaleString());
+
+            header.append(time);
+        }
+
+        item.append(header, body);
         messages.append(item);
 
         if (nearBottom) {
@@ -72,6 +93,38 @@ if (typeof window.io !== "function") {
         }
     });
 
+    socket.on("system_message", (data) => {
+        const nearBottom =
+            messages.scrollHeight - messages.scrollTop - messages.clientHeight < 60;
+
+        const item = document.createElement("li");
+        const text = document.createElement("p");
+
+        item.className = "system-message";
+        text.textContent = data.message;
+        item.append(text);
+
+        const date = new Date(data.timestamp);
+
+        if (data.timestamp && !Number.isNaN(date.getTime())) {
+            const time = document.createElement("time");
+
+            time.dateTime = date.toISOString();
+            time.textContent = date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+            time.title = date.toLocaleString();
+
+            item.append(time);
+        }
+
+        messages.append(item);
+
+        if (nearBottom) {
+            messages.scrollTop = messages.scrollHeight;
+        }
+    });
     messageForm.addEventListener("submit", (event) => {
         event.preventDefault();
 

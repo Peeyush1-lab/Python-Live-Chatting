@@ -4,6 +4,7 @@ import socketio
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from datetime import datetime, timezone
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 FRONTEND_DIR = PROJECT_ROOT / "Frontend"
@@ -22,7 +23,7 @@ async def home():
 
 @api.get("/health")
 async def health():
-    return {"status": "ok", "version": "0.2.0"}
+    return {"status": "ok", "version": "0.3.0"}
 
 
 @sio.event
@@ -37,6 +38,19 @@ async def connect(sid, environ, auth):
 
 @sio.event
 async def disconnect(sid, reason):
+    session = await sio.get_session(sid)
+    username = session.get("username")
+
+    if username:
+        await sio.emit(
+            "system_message",
+            {
+                "message": f"{username} left the chat.",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            skip_sid=sid,
+        )
+
     print(f"Disconnected: {sid} | Reason: {reason}")
 
 
@@ -58,7 +72,26 @@ async def join_chat(sid, data):
             "error": "Username must contain 2 to 24 characters.",
         }
 
-    await sio.save_session(sid, {"username": username})
+    session = await sio.get_session(sid)
+    previous_username = session.get("username")
+
+    session["username"] = username
+    await sio.save_session(sid, session)
+
+    if previous_username != username:
+        message = (
+            f"{previous_username} is now known as {username}."
+            if previous_username
+            else f"{username} joined the chat."
+        )
+
+        await sio.emit(
+            "system_message",
+            {
+                "message": message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        )
 
     return {"ok": True, "username": username}
 
@@ -89,7 +122,11 @@ async def send_message(sid, data):
 
     await sio.emit(
         "chat_message",
-        {"username": username, "message": message},
+        {
+            "username": username,
+            "message": message,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
     )
 
     return {"ok": True}

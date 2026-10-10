@@ -255,6 +255,31 @@ input:disabled {
     opacity: 0.5;
 }
 
+.message-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+}
+
+.message-header time {
+    color: var(--muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+#messages .system-message {
+    border-style: dashed;
+    color: var(--muted);
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.system-message time {
+    font-size: 0.75rem;
+}
+
 @media (min-width: 640px) {
     .connection-card {
         padding: 3rem;

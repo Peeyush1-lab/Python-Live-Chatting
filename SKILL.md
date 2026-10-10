@@ -28,14 +28,15 @@ The current stage is repository setup; messaging is not implemented yet.
 
 ## 3. Architecture
 
-Implemented v0.2.0 architecture:
+Implemented v0.3.0 architecture:
 
 - Browser frontend: displays connection status, username entry,
-  the shared conversation, and the message composer.
-- JavaScript Socket.IO client: sends join_chat and send_message
-  events, handles acknowledgements, and displays chat_message events.
-- Python Socket.IO server: validates requests, stores usernames
-  per connection, and broadcasts messages to connected clients.
+  the shared conversation, message timestamps, and the message composer.
+- JavaScript Socket.IO client: sends join_chat and send_message events,
+  handles acknowledgements, and displays chat_message and system_message
+  events as plain text.
+- Python Socket.IO server: validates requests, stores usernames per
+  connection, timestamps messages and notices in UTC, and broadcasts events.
 - Socket.IO session storage: holds each connection's display name
   temporarily; users must rejoin after reconnecting.
 - FastAPI: serves the frontend assets and the /health endpoint.
@@ -46,16 +47,29 @@ Implemented v0.2.0 architecture:
 1. The browser sends a username through join_chat.
 2. The server validates and stores it in the connection's session.
 3. The browser sends message text through send_message.
-4. The server validates the message and retrieves the session username.
+4. The server validates the message, retrieves the session username,
+   and generates a UTC timestamp.
 5. The server broadcasts chat_message to all connected browsers.
-6. Each browser displays the sender and message as plain text.
+6. Each browser displays the sender and message as plain text,
+   converting the timestamp to the viewer's local timezone.
+
+### Conversation Notices
+
+- First join: the server broadcasts a join notice.
+- Username change: the server broadcasts a name-change notice.
+- Repeated submission of the same username: no additional notice.
+- Disconnect after joining: the server sends a leave notice
+  to the remaining connected browsers.
+- Notices use system_message events with UTC timestamps.
+- Network-loss detection can delay leave notices.
 
 FastAPI and Socket.IO run together in one application.
 
-Messages are not stored on the server. Each browser holds its displayed
-conversation temporarily, and refreshing clears it.
+Messages and notices are not persisted on the server.
+Each browser holds its displayed conversation temporarily;
+refreshing clears it.
 
-SQLite is planned for a later release.
+SQLite message history is planned for v0.4.0.
 
 ## 4. Key decisions and trade-offs
 
@@ -65,7 +79,7 @@ SQLite is planned for a later release.
 | Delivery | Complete app at once or incremental releases | Incremental releases | Understand and verify each feature before adding another | Full functionality arrives gradually |
 | Username storage | Browser-provided sender or server session | Server session | Server selects the sender name from the joined connection | Users must rejoin after reconnecting |
 | Message display | HTML rendering or plain text | textContent | User messages display literally | Rich-text formatting is unavailable |
-
+| Timestamp source | Browser clock or server clock | Server UTC clock | Uses one timestamp source across clients | Depends on the server clock being accurate |
 
 ## 5. Skills demonstrated
 
@@ -88,6 +102,10 @@ SQLite is planned for a later release.
   Evidence: frontend/script.js; literal HTML text check passed.
 - [x] Disabled sending after disconnection until users rejoin.
   Evidence: server stop/restart check passed.
+- [x] Generated UTC timestamps and displayed local times.
+  Evidence: main.py and frontend/script.js; two-tab check passed.
+- [x] Implemented join, name-change, and leave notices.
+  Evidence: system_message events; verified with two browser tabs.
 
 ## 6. Numbers I measured
 

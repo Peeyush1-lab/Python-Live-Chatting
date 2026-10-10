@@ -7,7 +7,7 @@ a manageable feature, verification steps, and an engineering log update.
 
 ## Project Status
 
-v0.2.0 — Usernames and shared-chat messaging verified locally.
+v0.3.0 — Message timestamps and conversation notices verified locally.
 
 ### Working Features
 
@@ -21,8 +21,11 @@ v0.2.0 — Usernames and shared-chat messaging verified locally.
 - Username and message validation on the server.
 - Sending enabled only after joining.
 - Messages rendered as plain text.
+- Server-generated UTC timestamps displayed in the viewer’s local timezone.
+- Join, username-change, and leave notices in the conversation.
+- Repeated submission of the same username does not create another notice.
 
-Messaging is planned for v0.2.0.
+SQLite message history is planned for v0.4.0.
 
 ## Technology Stack
 
@@ -98,7 +101,7 @@ skills, measurements, fixes, interview preparation, and honest limitations.
 - No multiple rooms, private messaging, or deployment.
 - The browser Socket.IO client loads from an external CDN.
 - No performance measurements yet.
-
+- Leave notices may be delayed while the server detects a lost connection.
 ## Credits
 
 Socket.IO learning reference:
