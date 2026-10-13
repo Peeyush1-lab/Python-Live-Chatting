@@ -7,7 +7,7 @@ a manageable feature, verification steps, and an engineering log update.
 
 ## Project Status
 
-v0.3.0 — Message timestamps and conversation notices verified locally.
+v0.4.0 — SQLite message history.
 
 ### Working Features
 
@@ -24,8 +24,13 @@ v0.3.0 — Message timestamps and conversation notices verified locally.
 - Server-generated UTC timestamps displayed in the viewer’s local timezone.
 - Join, username-change, and leave notices in the conversation.
 - Repeated submission of the same username does not create another notice.
+- Chat messages saved in SQLite before broadcasting.
+- Latest 100 saved messages loaded oldest first on connection.
+- Message history retained across page refreshes and server restarts.
+- Manual history reload with error and timeout feedback.
+- Message IDs prevent duplicate display between history and live events.
 
-SQLite message history is planned for v0.4.0.
+Multiple chat rooms are planned for v0.5.0.
 
 ## Technology Stack
 
@@ -78,6 +83,17 @@ python -m uvicorn main:app --reload
 
 Open http://127.0.0.1:8000.
 
+### Local Database
+
+The application automatically creates data/chat.db on startup.
+Python's built-in sqlite3 module is used; no separate database
+installation is required.
+
+The data/ directory is excluded from Git. A fresh clone starts
+with an empty database.
+
+Keep this database file to preserve message history.
+
 ### Manual Verification
 
 - Confirm the connected status and server welcome message.
@@ -94,14 +110,18 @@ skills, measurements, fixes, interview preparation, and honest limitations.
 ## Current Limitations
 
 - Display names are not authenticated or unique.
-- All connected browsers can receive shared-chat messages.
-- Messages are not saved; refreshing clears displayed history.
-- Users must join again after reconnecting.
-- Delivery acknowledgement timeouts can leave delivery uncertain.
+- All connected browsers can receive messages and request shared history.
+- History retrieval is limited to the latest 100 messages; older messages
+  remain in the database but cannot be browsed through the interface.
+- Join, name-change, and leave notices are temporary.
+- Reloading history clears previously displayed temporary notices.
+- Users must rejoin after reconnecting to send messages.
+- Retrying a message after an acknowledgement timeout can create
+  another stored message.
 - No multiple rooms, private messaging, or deployment.
+- No performance measurements or load tests yet.
 - The browser Socket.IO client loads from an external CDN.
-- No performance measurements yet.
-- Leave notices may be delayed while the server detects a lost connection.
+
 ## Credits
 
 Socket.IO learning reference:

@@ -5,10 +5,14 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime, timezone
+import asyncio
+import sqlite3
+from database import init_db, save_message, get_recent_messages
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 FRONTEND_DIR = PROJECT_ROOT / "Frontend"
 
+init_db()
 api = FastAPI()
 api.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
@@ -23,7 +27,7 @@ async def home():
 
 @api.get("/health")
 async def health():
-    return {"status": "ok", "version": "0.3.0"}
+    return {"status": "ok", "version": "0.4.0"}
 
 
 @sio.event
@@ -120,13 +124,33 @@ async def send_message(sid, data):
             "error": "Message must contain 1 to 1000 characters.",
         }
 
-    await sio.emit(
-        "chat_message",
-        {
-            "username": username,
-            "message": message,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        },
-    )
+    timestamp = datetime.now(timezone.utc).isoformat()
 
-    return {"ok": True}
+    try:
+        saved_message = await asyncio.to_thread(
+            save_message,
+            username,
+            message,
+            timestamp,
+        )
+    except sqlite3.Error:
+        return {
+            "ok": False,
+            "error": "Message could not be saved. Please try again.",
+        }
+
+    await sio.emit("chat_message", saved_message)
+
+    return {"ok": True, "id": saved_message["id"]}
+
+@sio.event
+async def get_history(sid):
+    try:
+        history = await asyncio.to_thread(get_recent_messages)
+    except sqlite3.Error:
+        return {
+            "ok": False,
+            "error": "Message history could not be loaded. Please retry.",
+        }
+
+    return {"ok": True, "messages": history}

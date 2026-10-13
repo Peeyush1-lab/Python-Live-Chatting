@@ -28,48 +28,53 @@ The current stage is repository setup; messaging is not implemented yet.
 
 ## 3. Architecture
 
-Implemented v0.3.0 architecture:
+Implemented v0.4.0 architecture:
 
 - Browser frontend: displays connection status, username entry,
-  the shared conversation, message timestamps, and the message composer.
-- JavaScript Socket.IO client: sends join_chat and send_message events,
-  handles acknowledgements, and displays chat_message and system_message
-  events as plain text.
-- Python Socket.IO server: validates requests, stores usernames per
-  connection, timestamps messages and notices in UTC, and broadcasts events.
-- Socket.IO session storage: holds each connection's display name
-  temporarily; users must rejoin after reconnecting.
-- FastAPI: serves the frontend assets and the /health endpoint.
+  messages, timestamps, temporary notices, and history controls.
+- JavaScript Socket.IO client: sends join_chat, send_message,
+  and get_history events and handles acknowledgements.
+- Python Socket.IO server: validates requests, manages connection
+  usernames, saves messages, and broadcasts chat and system events.
+- Socket.IO session storage: holds display names temporarily;
+  users must rejoin after reconnecting.
+- SQLite: stores message IDs, sender names, message text,
+  and UTC timestamps in data/chat.db.
+- database.py: initializes the table, saves messages using
+  parameterized SQL, and reads the latest 100 messages.
+- FastAPI: serves frontend assets and the /health endpoint.
 - Uvicorn: runs the combined ASGI application.
 
 ### Message Flow
 
-1. The browser sends a username through join_chat.
-2. The server validates and stores it in the connection's session.
-3. The browser sends message text through send_message.
-4. The server validates the message, retrieves the session username,
-   and generates a UTC timestamp.
-5. The server broadcasts chat_message to all connected browsers.
-6. Each browser displays the sender and message as plain text,
-   converting the timestamp to the viewer's local timezone.
+1. The browser sends message text through send_message.
+2. The server validates it and retrieves the session username.
+3. The server generates a UTC timestamp.
+4. A worker thread saves and commits the message to SQLite.
+5. The server broadcasts the saved message, including its ID.
+6. Browsers display the message as plain text with local time.
 
-### Conversation Notices
+If saving fails, the server returns an error without broadcasting.
 
-- First join: the server broadcasts a join notice.
-- Username change: the server broadcasts a name-change notice.
-- Repeated submission of the same username: no additional notice.
-- Disconnect after joining: the server sends a leave notice
-  to the remaining connected browsers.
-- Notices use system_message events with UTC timestamps.
-- Network-loss detection can delay leave notices.
+### History Flow
+
+1. On connection or manual reload, the browser requests get_history.
+2. A worker thread retrieves the latest 100 stored messages.
+3. The server returns them oldest first through an acknowledgement.
+4. The frontend replaces the displayed conversation with history.
+5. Events received during loading are buffered.
+6. Message IDs prevent duplicate display.
+
+### Temporary State
+
+Display names are held in connection sessions.
+System notices are broadcast but not saved.
+
+The database survives server restarts. Displayed history is restored
+after connection, while users must rejoin before sending.
 
 FastAPI and Socket.IO run together in one application.
-
-Messages and notices are not persisted on the server.
-Each browser holds its displayed conversation temporarily;
-refreshing clears it.
-
-SQLite message history is planned for v0.4.0.
+The generated data/ directory is excluded from Git.
 
 ## 4. Key decisions and trade-offs
 
@@ -80,6 +85,10 @@ SQLite message history is planned for v0.4.0.
 | Username storage | Browser-provided sender or server session | Server session | Server selects the sender name from the joined connection | Users must rejoin after reconnecting |
 | Message display | HTML rendering or plain text | textContent | User messages display literally | Rich-text formatting is unavailable |
 | Timestamp source | Browser clock or server clock | Server UTC clock | Uses one timestamp source across clients | Depends on the server clock being accurate |
+| Message storage | Memory, SQLite, or a separate database server | SQLite | Simple local persistence without another service | Concurrent writes are serialized; no multi-server design implemented |
+| Save order | Broadcast before saving or save first | Save and commit first | Avoid broadcasting messages that failed to save | Delivery waits for database completion |
+| History loading | Entire database or bounded history | Latest 100 messages | Bounds the initial response size | Older history is not accessible in the UI |
+| Duplicate display | Compare text or use message IDs | Database message IDs | Distinguishes separate messages with identical text | Does not prevent duplicate submissions |
 
 ## 5. Skills demonstrated
 
@@ -106,6 +115,14 @@ SQLite message history is planned for v0.4.0.
   Evidence: main.py and frontend/script.js; two-tab check passed.
 - [x] Implemented join, name-change, and leave notices.
   Evidence: system_message events; verified with two browser tabs.
+- [x] Implemented SQLite storage with parameterized SQL.
+  Evidence: database.py.
+- [x] Moved database reads and writes to worker threads.
+  Evidence: asyncio.to_thread calls in main.py.
+- [ ] Verified history across page refreshes and server restarts.
+  Evidence: manual browser and server restart checks.
+- [ ] Verified history/live message deduplication.
+  Evidence: two-tab messaging and manual history reload checks.
 
 ## 6. Numbers I measured
 
@@ -141,18 +158,28 @@ Answers not rehearsed yet.
 ## 10. Honest limitations
 
 - Display names are not authenticated or unique.
-- All connected browsers can receive shared-chat messages.
-- Messages are not saved; refreshing clears displayed history.
-- Users must join again after reconnecting.
-- Delivery acknowledgement timeouts can leave delivery uncertain.
+- All connected browsers can receive messages and request shared history.
+- History retrieval is limited to the latest 100 messages; older messages
+  remain in the database but cannot be browsed through the interface.
+- Join, name-change, and leave notices are temporary.
+- Reloading history clears previously displayed temporary notices.
+- Users must rejoin after reconnecting to send messages.
+- Retrying a message after an acknowledgement timeout can create
+  another stored message.
 - No multiple rooms, private messaging, or deployment.
+- No performance measurements or load tests yet.
 - The browser Socket.IO client loads from an external CDN.
-- No performance measurements yet.
 
 ## 11. How to run it
 
 Prerequisites: Python with pip, Git, and internet access to load
 the browser Socket.IO client.
+
+The server automatically creates data/chat.db on startup.
+No additional database installation or environment variables are required.
+
+The data/ directory is ignored by Git. Retaining data/chat.db
+preserves stored messages across server restarts.
 
 ### First-time setup — Windows PowerShell
 

@@ -17,7 +17,7 @@
     <header class="site-header">
         <nav aria-label="Main navigation">
             <a class="brand" href="/">Python Live Chatting<span>.</span></a>
-            <span class="version">v0.3.0</span>
+            <span class="version">v0.4.0</span>
         </nav>
     </header>
 
@@ -59,6 +59,9 @@
             <section class="connection-panel" aria-labelledby="chat-heading">
                 <h2 id="chat-heading">Shared conversation</h2>
 
+                <p id="history-feedback" role="status">Waiting to load history.</p>
+                <button id="history-retry" type="button" disabled>Reload history</button>
+
                 <ol id="messages" role="log" aria-label="Chat messages" aria-live="polite" aria-relevant="additions">
                 </ol>
 
@@ -74,7 +77,8 @@
                 </p>
             </section>
             <p class="release-note">
-                Messages are live and are not saved after refreshing.
+                The latest 100 saved messages load on connection.
+                Join and leave notices are temporary.
             </p>
         </section>
     </main>
