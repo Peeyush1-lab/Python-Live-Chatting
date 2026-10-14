@@ -7,7 +7,7 @@ a manageable feature, verification steps, and an engineering log update.
 
 ## Project Status
 
-v0.4.0 — SQLite message history.
+v0.5.0 — Multiple public chat rooms verified locally.
 
 ### Working Features
 
@@ -29,6 +29,12 @@ v0.4.0 — SQLite message history.
 - Message history retained across page refreshes and server restarts.
 - Manual history reload with error and timeout feedback.
 - Message IDs prevent duplicate display between history and live events.
+- General, Study, and Coding public chat rooms.
+- One joined room per browser connection.
+- Messages and conversation notices delivered only within their room.
+- Latest 100 saved messages retrieved for the joined room.
+- Switching rooms clears the previous conversation and loads room history.
+- Existing messages preserved in General through a database migration.
 
 Multiple chat rooms are planned for v0.5.0.
 
@@ -45,18 +51,21 @@ Multiple chat rooms are planned for v0.5.0.
 
 ## Release Roadmap
 
-These versions describe planned work, not completed features.
+Versions v0.1.0–v0.5.0 are implemented and verified locally.
+Later versions describe planned work.
 
-| Version | Planned Scope |
-|---|---|
-| v0.1.0 | Project setup and connection status |
-| v0.2.0 | Usernames and shared-room messaging |
-| v0.3.0 | Timestamps, join/leave notices, and validation |
-| v0.4.0 | Persistent message history |
-| v0.5.0 | Multiple chat rooms |
-| v0.6.0 | Registration and login |
-| v0.7.0 | Private conversations |
-| v1.0.0 | Reliability, testing, documentation, and deployment |
+| Version | Scope | Status |
+|---|---|---|
+| v0.1.0 | Project setup and connection status | Completed |
+| v0.2.0 | Usernames, shared messaging, and input validation | Completed |
+| v0.3.0 | Timestamps and join/name-change/leave notices | Completed |
+| v0.4.0 | SQLite persistence and message history | Completed |
+| v0.5.0 | Public chat rooms and room-specific history | Completed |
+| v0.6.0 | Registration and login | Planned |
+| v0.7.0 | Private conversations | Planned |
+| v1.0.0 | Reliability, testing, documentation, and deployment | Planned |
+
+Release notes are available in the repository's GitHub Releases.
 
 ## Development Workflow
 
@@ -109,17 +118,15 @@ skills, measurements, fixes, interview preparation, and honest limitations.
 
 ## Current Limitations
 
+- Rooms are public; anyone can join any available room.
 - Display names are not authenticated or unique.
-- All connected browsers can receive messages and request shared history.
-- History retrieval is limited to the latest 100 messages; older messages
-  remain in the database but cannot be browsed through the interface.
-- Join, name-change, and leave notices are temporary.
-- Reloading history clears previously displayed temporary notices.
-- Users must rejoin after reconnecting to send messages.
-- Retrying a message after an acknowledgement timeout can create
-  another stored message.
-- No multiple rooms, private messaging, or deployment.
-- No performance measurements or load tests yet.
+- Only three predefined rooms are available.
+- History retrieval is limited to the latest 100 messages per room.
+- System notices are temporary.
+- Users must rejoin after reconnecting.
+- The joining client may not display its own join or rename notice.
+- Retrying an unconfirmed message can create another stored message.
+- No private messaging, deployment, or load testing.
 - The browser Socket.IO client loads from an external CDN.
 
 ## Credits

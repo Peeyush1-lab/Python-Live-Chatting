@@ -17,21 +17,44 @@ def init_db():
                     id INTEGER PRIMARY KEY,
                     username TEXT NOT NULL,
                     message TEXT NOT NULL,
-                    timestamp TEXT NOT NULL
+                    timestamp TEXT NOT NULL,
+                    room TEXT NOT NULL DEFAULT 'general'
                 )
                 """
             )
 
+            columns = {
+                row[1]
+                for row in connection.execute(
+                    "PRAGMA table_info(messages)"
+                ).fetchall()
+            }
 
-def save_message(username, message, timestamp):
+            if "room" not in columns:
+                connection.execute(
+                    """
+                    ALTER TABLE messages
+                    ADD COLUMN room TEXT NOT NULL DEFAULT 'general'
+                    """
+                )
+
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_messages_room_id
+                ON messages (room, id)
+                """
+            )
+
+
+def save_message(username, message, timestamp, room="general"):
     with closing(sqlite3.connect(DATABASE_PATH)) as connection:
         with connection:
             cursor = connection.execute(
                 """
-                INSERT INTO messages (username, message, timestamp)
-                VALUES (?, ?, ?)
+                INSERT INTO messages (username, message, timestamp, room)
+                VALUES (?, ?, ?, ?)
                 """,
-                (username, message, timestamp),
+                (username, message, timestamp, room),
             )
 
             message_id = cursor.lastrowid
@@ -41,10 +64,11 @@ def save_message(username, message, timestamp):
         "username": username,
         "message": message,
         "timestamp": timestamp,
+        "room": room,
     }
 
 
-def get_recent_messages(limit=100):
+def get_recent_messages(limit=100, room="general"):
     if not isinstance(limit, int) or isinstance(limit, bool):
         raise ValueError("Limit must be an integer.")
 
@@ -56,12 +80,13 @@ def get_recent_messages(limit=100):
 
         rows = connection.execute(
             """
-            SELECT id, username, message, timestamp
+            SELECT id, username, message, timestamp, room
             FROM messages
+            WHERE room = ?
             ORDER BY id DESC
             LIMIT ?
             """,
-            (limit,),
+            (room, limit),
         ).fetchall()
 
     return [dict(row) for row in reversed(rows)]

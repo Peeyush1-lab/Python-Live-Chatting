@@ -28,53 +28,53 @@ The current stage is repository setup; messaging is not implemented yet.
 
 ## 3. Architecture
 
-Implemented v0.4.0 architecture:
+Implemented v0.5.0 architecture:
 
-- Browser frontend: displays connection status, username entry,
-  messages, timestamps, temporary notices, and history controls.
-- JavaScript Socket.IO client: sends join_chat, send_message,
-  and get_history events and handles acknowledgements.
-- Python Socket.IO server: validates requests, manages connection
-  usernames, saves messages, and broadcasts chat and system events.
-- Socket.IO session storage: holds display names temporarily;
-  users must rejoin after reconnecting.
-- SQLite: stores message IDs, sender names, message text,
-  and UTC timestamps in data/chat.db.
-- database.py: initializes the table, saves messages using
-  parameterized SQL, and reads the latest 100 messages.
+- Browser frontend: provides username entry, a room selector,
+  room conversation, timestamps, and history controls.
+- JavaScript Socket.IO client: tracks the confirmed room, sends
+  join and message requests, and filters incoming events by room.
+- Python Socket.IO server: validates room selection and stores
+  the username and room in each connection's session.
+- Socket.IO rooms: use chat:general, chat:study, and chat:coding
+  to route messages and notices to room members.
+- SQLite: stores message ID, username, text, UTC timestamp, and room.
+- database.py: migrates existing messages to General and retrieves
+  recent messages using a room filter and a room/id index.
 - FastAPI: serves frontend assets and the /health endpoint.
 - Uvicorn: runs the combined ASGI application.
 
-### Message Flow
+### Join and Switch Flow
 
-1. The browser sends message text through send_message.
-2. The server validates it and retrieves the session username.
-3. The server generates a UTC timestamp.
-4. A worker thread saves and commits the message to SQLite.
-5. The server broadcasts the saved message, including its ID.
-6. Browsers display the message as plain text with local time.
+1. The browser sends username and room through join_chat.
+2. The server validates both values.
+3. When switching, the connection leaves its previous room.
+4. The connection enters the selected Socket.IO room.
+5. The server saves the username and room in its session.
+6. After acknowledgement, the frontend clears the previous
+   conversation and requests the joined room's history.
 
-If saving fails, the server returns an error without broadcasting.
+### Message and History Flow
 
-### History Flow
+1. The server takes the sender and room from the connection session.
+2. Valid messages are committed to SQLite before broadcasting.
+3. chat_message is sent only to members of that room.
+4. get_history returns the joined room's latest 100 messages,
+   ordered oldest first.
+5. The frontend rejects stale history responses and filters
+   live events by the confirmed room.
+6. Database message IDs prevent duplicate display.
 
-1. On connection or manual reload, the browser requests get_history.
-2. A worker thread retrieves the latest 100 stored messages.
-3. The server returns them oldest first through an acknowledgement.
-4. The frontend replaces the displayed conversation with history.
-5. Events received during loading are buffered.
-6. Message IDs prevent duplicate display.
+### Storage and Temporary State
 
-### Temporary State
+Existing messages were assigned to General without deleting them.
+Database operations run in worker threads.
 
-Display names are held in connection sessions.
-System notices are broadcast but not saved.
+Messages persist in data/chat.db. Connection sessions and system
+notices are temporary. Users must rejoin after reconnecting.
 
-The database survives server restarts. Displayed history is restored
-after connection, while users must rejoin before sending.
-
-FastAPI and Socket.IO run together in one application.
-The generated data/ directory is excluded from Git.
+All rooms are public. Room membership provides message routing,
+not private access control.
 
 ## 4. Key decisions and trade-offs
 
@@ -89,6 +89,9 @@ The generated data/ directory is excluded from Git.
 | Save order | Broadcast before saving or save first | Save and commit first | Avoid broadcasting messages that failed to save | Delivery waits for database completion |
 | History loading | Entire database or bounded history | Latest 100 messages | Bounds the initial response size | Older history is not accessible in the UI |
 | Duplicate display | Compare text or use message IDs | Database message IDs | Distinguishes separate messages with identical text | Does not prevent duplicate submissions |
+| Room scope | Multiple simultaneous rooms or one active room | One active room per connection | Simplifies switching and conversation state | Cannot follow several rooms simultaneously |
+| Room identifiers | Plain names or prefixed names | chat: prefix | Separates chat rooms from automatic connection rooms | Requires consistent naming |
+| Existing messages | Delete or migrate | Assign to General | Preserves saved conversations | Old messages have no original room information |
 
 ## 5. Skills demonstrated
 
@@ -119,10 +122,18 @@ The generated data/ directory is excluded from Git.
   Evidence: database.py.
 - [x] Moved database reads and writes to worker threads.
   Evidence: asyncio.to_thread calls in main.py.
-- [ ] Verified history across page refreshes and server restarts.
+- [x] Verified history across page refreshes and server restarts.
   Evidence: manual browser and server restart checks.
-- [ ] Verified history/live message deduplication.
+- [x] Verified history/live message deduplication.
   Evidence: two-tab messaging and manual history reload checks.
+- [x] Implemented room membership and room-scoped broadcasts.
+  Evidence: main.py; cross-room messaging checks passed.
+- [x] Implemented room-filtered SQLite history.
+  Evidence: database.py; switching and restart checks passed.
+- [x] Migrated existing messages without deletion.
+  Evidence: room column migration and General history.
+- [x] Managed frontend room switching and stale history responses.
+  Evidence: frontend/script.js.
 
 ## 6. Numbers I measured
 
@@ -140,6 +151,21 @@ Record actual measurements; do not use estimated results.
 - Cause: Cache files were already tracked; adding ignore rules did not untrack them.
 - Fix: Removed the folder from Git tracking with git rm --cached and pushed the cleanup.
 - Lesson: Review staged files before committing. Ignore rules do not remove previously tracked files.
+
+### First join blocked by an incorrect guard
+
+- Symptom: Clicking Join / switch room did nothing.
+- Cause: The join handler required joined to already be true.
+- Fix: Removed !joined from the join guard while retaining it
+  in the message-send guard.
+- Lesson: A transition must not require its destination state.
+
+### Message submission handler missing
+
+- Symptom: The script had no handler to submit the message form.
+- Cause: The handler was omitted during frontend edits.
+- Fix: Restored the message-form submit listener.
+- Lesson: Verify existing interactions after replacing code blocks.
 
 ## 8. What I would do differently at 100x scale
 

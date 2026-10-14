@@ -17,6 +17,9 @@ const messageFeedback = document.getElementById("message-feedback");
 const historyFeedback = document.getElementById("history-feedback");
 const historyRetry = document.getElementById("history-retry");
 
+const roomSelect = document.getElementById("room");
+const currentRoomLabel = document.getElementById("current-room");
+
 function updateStatus(text, state, message) {
     statusElement.textContent = text;
     statusElement.dataset.state = state;
@@ -39,6 +42,7 @@ if (typeof window.io !== "function") {
 
     let joining = false;
     let joined = false;
+    let currentRoom = null;
     let sending = false;
     let loadingHistory = false;
 
@@ -49,7 +53,7 @@ if (typeof window.io !== "function") {
     let pendingMessages = [];
 
     function updateComposer() {
-        const enabled = socket.connected && joined;
+        const enabled = socket.connected && joined && !joining;
 
         messageInput.disabled = !enabled;
         sendButton.disabled = !enabled || sending;
@@ -58,8 +62,8 @@ if (typeof window.io !== "function") {
     function nearBottom() {
         return (
             messages.scrollHeight -
-                messages.scrollTop -
-                messages.clientHeight <
+            messages.scrollTop -
+            messages.clientHeight <
             60
         );
     }
@@ -161,7 +165,7 @@ if (typeof window.io !== "function") {
     }
 
     function loadHistory() {
-        if (!socket.connected || loadingHistory) {
+        if (!socket.connected || !joined || joining || loadingHistory) {
             return;
         }
 
@@ -171,13 +175,14 @@ if (typeof window.io !== "function") {
         historyFeedback.textContent = "Loading saved messages…";
 
         const request = ++historyRequest;
+        const requestedRoom = currentRoom;
 
         socket.timeout(5000).emit("get_history", (error, response) => {
-            if (request !== historyRequest) {
+            if (request !== historyRequest || requestedRoom !== currentRoom) {
                 return;
             }
 
-            if (!error && response?.ok && Array.isArray(response.messages)) {
+            if (!error && response?.ok && response.room === requestedRoom && Array.isArray(response.messages)) {
                 messages.replaceChildren();
                 displayedIds.clear();
 
@@ -217,7 +222,10 @@ if (typeof window.io !== "function") {
         usernameFeedback.textContent = "Connected. Choose a name to join.";
         messageFeedback.textContent = "Join the chat to send messages.";
 
-        loadHistory();
+        currentRoom = null;
+        currentRoomLabel.textContent = "Not joined";
+        historyRetry.disabled = true;
+        historyFeedback.textContent = "Join a room to load its history.";
     });
 
     socket.on("server_message", (data) => {
@@ -234,7 +242,9 @@ if (typeof window.io !== "function") {
         sending = false;
         loadingHistory = false;
 
-        flushPendingMessages();
+        pendingMessages = [];
+        currentRoom = null;
+        currentRoomLabel.textContent = "Not joined";
 
         joinButton.disabled = true;
         historyRetry.disabled = true;
@@ -253,7 +263,7 @@ if (typeof window.io !== "function") {
             "Connection lost. Join again after reconnecting.";
 
         historyFeedback.textContent =
-            "Disconnected. History will reload after reconnecting.";
+            "Disconnected. Rejoin a room after reconnecting to load history.";
     });
 
     socket.on("connect_error", () => {
@@ -273,6 +283,10 @@ if (typeof window.io !== "function") {
     });
 
     socket.on("chat_message", (data) => {
+        if (joining || data.room !== currentRoom) {
+            return;
+        }
+
         if (loadingHistory) {
             pendingMessages.push({ type: "chat", data });
         } else {
@@ -281,6 +295,10 @@ if (typeof window.io !== "function") {
     });
 
     socket.on("system_message", (data) => {
+        if (joining || data.room !== currentRoom) {
+            return;
+        }
+
         if (loadingHistory) {
             pendingMessages.push({ type: "system", data });
         } else {
@@ -291,11 +309,12 @@ if (typeof window.io !== "function") {
     usernameForm.addEventListener("submit", (event) => {
         event.preventDefault();
 
-        if (!socket.connected || joining) {
+        if (!socket.connected || joining || sending) {
             return;
         }
 
         const username = usernameInput.value.trim();
+        const room = roomSelect.value;
 
         if (username.length < 2 || username.length > 24) {
             usernameFeedback.textContent =
@@ -305,14 +324,21 @@ if (typeof window.io !== "function") {
         }
 
         joining = true;
+        historyRequest += 1;
+        loadingHistory = false;
+        pendingMessages = [];
+
         joinButton.disabled = true;
-        usernameFeedback.textContent = "Joining…";
+        historyRetry.disabled = true;
+        updateComposer();
+
+        usernameFeedback.textContent = "Joining room…";
 
         const request = ++joinRequest;
 
         socket.timeout(5000).emit(
             "join_chat",
-            { username },
+            { username, room },
             (error, response) => {
                 if (request !== joinRequest) {
                     return;
@@ -322,23 +348,46 @@ if (typeof window.io !== "function") {
                 joinButton.disabled = !socket.connected;
 
                 if (error) {
+                    joined = false;
+                    currentRoom = null;
+                    currentRoomLabel.textContent = "Not confirmed";
+                    messages.replaceChildren();
+                    displayedIds.clear();
+                    updateComposer();
+
                     usernameFeedback.textContent =
-                        "No response from the server. Please retry.";
+                        "Room join is unconfirmed. Choose a room and retry.";
+                    historyFeedback.textContent =
+                        "Join a room to load its history.";
                     return;
                 }
 
                 if (!response?.ok) {
+                    updateComposer();
+
                     usernameFeedback.textContent =
-                        response?.error ?? "Could not join the chat.";
+                        response?.error ?? "Could not join the room.";
+
+                    if (joined) {
+                        loadHistory();
+                    }
+
                     return;
                 }
 
                 joined = true;
-                updateComposer();
+                currentRoom = response.room;
+                currentRoomLabel.textContent = currentRoom;
 
+                messages.replaceChildren();
+                displayedIds.clear();
+
+                updateComposer();
                 usernameFeedback.textContent =
-                    `Joined as ${response.username}.`;
+                    `Joined ${currentRoom} as ${response.username}.`;
                 messageFeedback.textContent = "You can now send messages.";
+
+                loadHistory();
                 messageInput.focus();
             }
         );
@@ -347,7 +396,7 @@ if (typeof window.io !== "function") {
     messageForm.addEventListener("submit", (event) => {
         event.preventDefault();
 
-        if (!socket.connected || !joined || sending) {
+        if (!socket.connected || !joined || joining || sending) {
             return;
         }
 
@@ -365,6 +414,7 @@ if (typeof window.io !== "function") {
 
         const request = ++messageRequest;
         const draft = messageInput.value;
+        const sentRoom = currentRoom;
 
         socket.timeout(5000).emit(
             "send_message",
@@ -389,6 +439,10 @@ if (typeof window.io !== "function") {
                     return;
                 }
 
+                if (sentRoom !== currentRoom) {
+                    return;
+                }
+
                 if (messageInput.value === draft) {
                     messageInput.value = "";
                 }
@@ -397,16 +451,6 @@ if (typeof window.io !== "function") {
                 messageInput.focus();
             }
         );
-    });
-
-    retryButton.addEventListener("click", () => {
-        updateStatus(
-            "Connecting…",
-            "connecting",
-            "Trying to reach the server."
-        );
-
-        socket.connect();
     });
 
     historyRetry.addEventListener("click", loadHistory);

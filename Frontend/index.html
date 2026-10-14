@@ -17,7 +17,7 @@
     <header class="site-header">
         <nav aria-label="Main navigation">
             <a class="brand" href="/">Python Live Chatting<span>.</span></a>
-            <span class="version">v0.4.0</span>
+            <span class="version">v0.5.0</span>
         </nav>
     </header>
 
@@ -47,8 +47,14 @@
                     <label for="username">Username</label>
                     <input id="username" name="username" type="text" minlength="2" maxlength="24"
                         autocomplete="nickname" aria-describedby="username-feedback" required>
+                    <label for="room">Chat room</label>
+                    <select id="room" name="room">
+                        <option value="general">General</option>
+                        <option value="study">Study</option>
+                        <option value="coding">Coding</option>
+                    </select>
                     <button id="join-button" type="submit" disabled>
-                        Join chat
+                        Join / switch room
                     </button>
                 </form>
 
@@ -57,7 +63,9 @@
                 </p>
             </section>
             <section class="connection-panel" aria-labelledby="chat-heading">
-                <h2 id="chat-heading">Shared conversation</h2>
+                <h2 id="chat-heading">
+                    Conversation — <span id="current-room">Not joined</span>
+                </h2>
 
                 <p id="history-feedback" role="status">Waiting to load history.</p>
                 <button id="history-retry" type="button" disabled>Reload history</button>
@@ -77,8 +85,8 @@
                 </p>
             </section>
             <p class="release-note">
-                The latest 100 saved messages load on connection.
-                Join and leave notices are temporary.
+                Each room has its own saved message history.
+                Rooms are public. Join and leave notices are temporary.
             </p>
         </section>
     </main>
